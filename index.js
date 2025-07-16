@@ -55,6 +55,8 @@ async function run() {
       const result = await UserCollection.insertOne(Users);
       res.send(result);
     });
+
+    // Users info get
     app.get("/Users", async (req, res) => {
       const email = req.query.email;
       let query = {};
@@ -65,8 +67,6 @@ async function run() {
       const result = await UserCollection.find(query).toArray();
       res.send(result);
     });
-
-    // Courts Collection
 
     // Get all courts
     app.get("/courts", async (req, res) => {
