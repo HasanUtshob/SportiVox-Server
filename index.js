@@ -282,9 +282,8 @@ async function run() {
       }
     });
 
+    // ---------------------------------------------------Members Collection------------------------------------------------
 
-
-    
     // GET /members
     app.get("/members", async (req, res) => {
       try {
@@ -309,6 +308,7 @@ async function run() {
         res.status(500).send({ error: "Failed to fetch members" });
       }
     });
+
     // DELETE /members/:email
     app.delete("/members/:email", async (req, res) => {
       const email = req.params.email;
