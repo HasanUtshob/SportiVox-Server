@@ -68,6 +68,8 @@ async function run() {
       res.send(result);
     });
 
+    // ---------------------------------------------Courts CRUD Oparation---------------------------------------------------------------------
+
     // Get all courts
     app.get("/courts", async (req, res) => {
       const courts = await courtCollection.find().toArray();
