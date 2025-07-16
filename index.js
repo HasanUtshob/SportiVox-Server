@@ -445,7 +445,7 @@ async function run() {
       res.send(result);
     });
 
-    // GET all announcements
+    // ------------------------------------------announcements section--------------------------------------------------------
     // ✅ GET all announcements
     app.get("/announcements", async (req, res) => {
       const announcements = await announcementsCollection.find().toArray();
