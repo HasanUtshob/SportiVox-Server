@@ -100,8 +100,9 @@ async function run() {
       res.send(result);
     });
 
-    // Booking Collection
-
+    // --------------------------------------------Booking Collection------------------------------------------------------------
+    
+    // Booking Post
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
 
