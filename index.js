@@ -344,7 +344,7 @@ async function run() {
       }
     });
     // ------------------------------------------------------------Users Collection-----------------------------------------
-    
+
     // GET /users
     app.get("/users", async (req, res) => {
       try {
@@ -382,10 +382,9 @@ async function run() {
       res.send(result);
     });
 
+    // --------------------------------------------------------Coupons Collections--------------------------------------------
 
-
-    // Coupons Section
-
+    // Coupons Validation
     app.get("/coupons", async (req, res) => {
       const code = req.query.code;
       if (!code) return res.status(400).send({ error: "Coupon code required" });
@@ -395,7 +394,7 @@ async function run() {
 
       res.send(coupon);
     });
-
+    // All Coupons Showing
     app.get("/all_coupons", async (req, res) => {
       try {
         const coupons = await couponsCollection.find().toArray();
@@ -405,11 +404,12 @@ async function run() {
       }
     });
 
+    // Add Coupons
     app.post("/coupons", async (req, res) => {
       const result = await couponsCollection.insertOne(req.body);
       res.send(result);
     });
-
+    // Update Coupons
     app.patch("/coupons/:id", async (req, res) => {
       const id = req.params.id;
       const { code, type, value, description } = req.body;
@@ -436,7 +436,7 @@ async function run() {
         res.status(500).send({ error: "Update failed" });
       }
     });
-
+    // Delete Coupons
     app.delete("/coupons/:id", async (req, res) => {
       const id = req.params.id;
       const result = await couponsCollection.deleteOne({
