@@ -101,7 +101,7 @@ async function run() {
     });
 
     // --------------------------------------------Booking Collection------------------------------------------------------------
-    
+
     // Booking Post
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
@@ -222,8 +222,9 @@ async function run() {
       }
     });
 
-    // Payment intent
+    // ----------------------------------------------Payment intent----------------------------------------------------------------
 
+    // Create Payment intent
     app.post("/create-payment-intent", async (req, res) => {
       const { amount } = req.body;
       try {
