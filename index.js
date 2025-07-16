@@ -343,7 +343,8 @@ async function run() {
         res.status(500).send({ error: "Failed to delete member" });
       }
     });
-
+    // ------------------------------------------------------------Users Collection-----------------------------------------
+    
     // GET /users
     app.get("/users", async (req, res) => {
       try {
@@ -380,6 +381,8 @@ async function run() {
       const result = await UserCollection.deleteOne({ email });
       res.send(result);
     });
+
+
 
     // Coupons Section
 
