@@ -3,4 +3,19 @@
 
 # ignore node_modules folder
 node_modules/
+
+# ignore service account keys and other sensitive files
+sportivox-serviceKey.json
+*.json
+!package.json
+!package-lock.json
+!vercel.json
+
+# ignore vercel folder
 .vercel
+
+# ignore other sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
