@@ -1,14 +1,15 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
 const app = express();
-const stripe = require("stripe")(
-  "process.env.STRIPE_KEY"
-);
+const stripe = require("stripe")(process.env.STRIPE_KEY);
+const admin = require("firebase-admin");
+const decoded = Buffer.from(process.env.FB_SERVICE, "base64").toString("utf8");
+const serviceAccount = JSON.parse(decoded);
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const port = process.env.PORT || 5000;
-require("dotenv").config();
 
 app.use(express.json());
 app.use(cors());
@@ -34,6 +35,26 @@ const client = new MongoClient(uri, {
   },
 });
 
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+const veryfyFBToken = async (req, res, next) => {
+  const authHeader = req.headers?.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send({ massage: "unauthorized Access" });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decode = await admin.auth().verifyIdToken(token);
+    req.decode = decode;
+    next();
+  } catch (error) {
+    return res.status(401).send({ massage: "unauthorized Access" });
+  }
+};
+
 const UserCollection = client.db("SportiVox").collection("Users");
 const courtCollection = client.db("SportiVox").collection("Courts");
 const bookingsCollection = client.db("SportiVox").collection("Booking");
@@ -46,7 +67,7 @@ const announcementsCollection = client
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
 
     // Users info post
@@ -57,7 +78,7 @@ async function run() {
     });
 
     // Users info get
-    app.get("/Users", async (req, res) => {
+    app.get("/Users", veryfyFBToken, async (req, res) => {
       const email = req.query.email;
       let query = {};
       if (email) {
@@ -77,13 +98,13 @@ async function run() {
     });
 
     // Add court
-    app.post("/courts", async (req, res) => {
+    app.post("/courts", veryfyFBToken, async (req, res) => {
       const result = await courtCollection.insertOne(req.body);
       res.send(result);
     });
 
     // Update court
-    app.put("/courts/:id", async (req, res) => {
+    app.put("/courts/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
       const updated = req.body;
       const result = await courtCollection.updateOne(
@@ -94,7 +115,7 @@ async function run() {
     });
 
     // Delete court
-    app.delete("/courts/:id", async (req, res) => {
+    app.delete("/courts/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await courtCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
@@ -103,9 +124,8 @@ async function run() {
     // --------------------------------------------Booking Collection------------------------------------------------------------
 
     // Booking Post
-    app.post("/bookings", async (req, res) => {
+    app.post("/bookings", veryfyFBToken, async (req, res) => {
       const booking = req.body;
-
       if (!booking || !booking.userEmail || !booking.courtId || !booking.date) {
         return res.status(400).json({ message: "Missing booking data" });
       }
@@ -127,7 +147,7 @@ async function run() {
     });
 
     // GET /bookings?status=pending
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", veryfyFBToken, async (req, res) => {
       try {
         const status = req.query.status;
         const paymentStatus = req.query.paymentStatus;
@@ -146,7 +166,7 @@ async function run() {
       }
     });
 
-    app.delete("/bookings/:id", async (req, res) => {
+    app.delete("/bookings/:id", veryfyFBToken, async (req, res) => {
       const _id = req.params.id;
 
       try {
@@ -168,7 +188,7 @@ async function run() {
       }
     });
 
-    app.put("/bookings/approve/:id", async (req, res) => {
+    app.put("/bookings/approve/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
 
       try {
@@ -225,7 +245,7 @@ async function run() {
     // ----------------------------------------------Payment intent----------------------------------------------------------------
 
     // Create Payment intent
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", veryfyFBToken, async (req, res) => {
       const { amount } = req.body;
       try {
         const paymentIntent = await stripe.paymentIntents.create({
@@ -243,7 +263,7 @@ async function run() {
     });
 
     // Mark as paid
-    app.patch("/bookings/payment/:id", async (req, res) => {
+    app.patch("/bookings/payment/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await bookingsCollection.updateOne(
         { _id: new ObjectId(id) },
@@ -253,7 +273,7 @@ async function run() {
     });
 
     // Save payment info to DB
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", veryfyFBToken, async (req, res) => {
       try {
         const payment = req.body;
 
@@ -267,7 +287,7 @@ async function run() {
     });
 
     // Example Route: /payments?email=shutshob@gmail.com
-    app.get("/payments", async (req, res) => {
+    app.get("/payments", veryfyFBToken, async (req, res) => {
       try {
         const email = req.query.email;
         const payments = await paymentsCollection
@@ -285,7 +305,7 @@ async function run() {
     // ---------------------------------------------------Members Collection------------------------------------------------
 
     // GET /members
-    app.get("/members", async (req, res) => {
+    app.get("/members", veryfyFBToken, async (req, res) => {
       try {
         const approvedBookings = await bookingsCollection
           .find({ status: "approved", paymentStatus: "paid" }) // only paid approved users
@@ -310,7 +330,7 @@ async function run() {
     });
 
     // DELETE /members/:email
-    app.delete("/members/:email", async (req, res) => {
+    app.delete("/members/:email", veryfyFBToken, async (req, res) => {
       const email = req.params.email;
 
       try {
@@ -346,7 +366,7 @@ async function run() {
     // ------------------------------------------------------------Users Collection-----------------------------------------
 
     // GET /users
-    app.get("/users", async (req, res) => {
+    app.get("/users", veryfyFBToken, async (req, res) => {
       try {
         const role = req.query.role;
         const query = role ? { role } : {};
@@ -359,7 +379,7 @@ async function run() {
     });
 
     // PATCH /users/role/:email
-    app.patch("/users/role/:email", async (req, res) => {
+    app.patch("/users/role/:email", veryfyFBToken, async (req, res) => {
       const email = req.params.email;
       const { role } = req.body;
 
@@ -376,7 +396,7 @@ async function run() {
     });
 
     // DELETE /users/:email
-    app.delete("/users/:email", async (req, res) => {
+    app.delete("/users/:email", veryfyFBToken, async (req, res) => {
       const email = req.params.email;
       const result = await UserCollection.deleteOne({ email });
       res.send(result);
@@ -405,12 +425,12 @@ async function run() {
     });
 
     // Add Coupons
-    app.post("/coupons", async (req, res) => {
+    app.post("/coupons", veryfyFBToken, async (req, res) => {
       const result = await couponsCollection.insertOne(req.body);
       res.send(result);
     });
     // Update Coupons
-    app.patch("/coupons/:id", async (req, res) => {
+    app.patch("/coupons/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
       const { code, type, value, description } = req.body;
 
@@ -437,7 +457,7 @@ async function run() {
       }
     });
     // Delete Coupons
-    app.delete("/coupons/:id", async (req, res) => {
+    app.delete("/coupons/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await couponsCollection.deleteOne({
         _id: new ObjectId(id),
@@ -447,13 +467,13 @@ async function run() {
 
     // ------------------------------------------announcements section--------------------------------------------------------
     // ✅ GET all announcements
-    app.get("/announcements", async (req, res) => {
+    app.get("/announcements", veryfyFBToken, async (req, res) => {
       const announcements = await announcementsCollection.find().toArray();
       res.send(announcements);
     });
 
     // ✅ POST add new announcement
-    app.post("/announcements", async (req, res) => {
+    app.post("/announcements", veryfyFBToken, async (req, res) => {
       const { title, description } = req.body;
 
       const announcement = {
@@ -467,7 +487,7 @@ async function run() {
     });
 
     // PATCH update announcement
-    app.patch("/announcements/:id", async (req, res) => {
+    app.patch("/announcements/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
       const { title, description } = req.body;
       const result = await announcementsCollection.updateOne(
@@ -478,7 +498,7 @@ async function run() {
     });
 
     // DELETE announcement
-    app.delete("/announcements/:id", async (req, res) => {
+    app.delete("/announcements/:id", veryfyFBToken, async (req, res) => {
       const id = req.params.id;
       const result = await announcementsCollection.deleteOne({
         _id: new ObjectId(id),
@@ -486,13 +506,11 @@ async function run() {
       res.send(result);
     });
 
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
   }
 }
 run().catch(console.dir);
