@@ -395,6 +395,31 @@ async function run() {
       res.send(result);
     });
 
+    // PATCH /Users/:id - Update user profile
+    app.patch("/Users/:id", veryfyFBToken, async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const { name, phone, address, photo } = req.body;
+
+      try {
+        const updateDoc = {};
+        if (name !== undefined) updateDoc.name = name;
+        if (phone !== undefined) updateDoc.phone = phone;
+        if (address !== undefined) updateDoc.address = address;
+        if (photo !== undefined) updateDoc.photo = photo;
+
+        const result = await UserCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateDoc }
+        );
+
+        res.send(result);
+      } catch (error) {
+        console.error("Profile update error:", error);
+        res.status(500).send({ error: "Failed to update profile" });
+      }
+    });
+
     // DELETE /users/:email
     app.delete("/users/:email", veryfyFBToken, async (req, res) => {
       const email = req.params.email;
